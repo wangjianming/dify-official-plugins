@@ -104,6 +104,7 @@ class GiteeAILargeLanguageModel(_CommonOaiApiCompat, LargeLanguageModel):
         :param credentials: model credentials
         :return:
         """
+        self._add_custom_parameters(credentials, model, None, True)
         try:
             headers = {"Content-Type": "application/json"}
 
