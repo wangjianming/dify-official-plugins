@@ -1,5 +1,6 @@
 from typing import Mapping, Optional, Union, Generator
-
+import requests
+import inspect
 from dify_plugin.entities.model import (
     AIModelEntity,
     I18nObject,
@@ -13,6 +14,27 @@ from dify_plugin.entities.model.message import PromptMessage, PromptMessageTool
 from dify_plugin.interfaces.model.openai_compatible.llm import (
     OAICompatLargeLanguageModel,
 )
+
+original_request = requests.api.request
+def patched_request(method, url, **kwargs2):
+    app_code = None
+    # find the X-Apig-AppCode from call stack
+    frame = inspect.currentframe()
+    while frame is not None:
+        if "credentials" in frame.f_locals:
+            cred = frame.f_locals["credentials"]
+            if "X-Apig-AppCode" in cred and cred["X-Apig-AppCode"]:
+                app_code = cred["X-Apig-AppCode"]
+                break
+        frame = frame.f_back
+    if "headers" not in kwargs2:
+        kwargs2["headers"] = {}
+    if app_code:
+        kwargs2["headers"]['X-Apig-AppCode'] = app_code
+    kwargs2['verify'] = False
+    response = original_request(method, url, **kwargs2)
+    return response
+requests.api.request = patched_request
 
 
 class OpenAILargeLanguageModel(OAICompatLargeLanguageModel):
